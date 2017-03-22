@@ -1,0 +1,52 @@
+<!-- Copyright (C) 2017 Diana Corbacho
+
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program.  If not, see <http://www.gnu.org/licenses/>. -->
+---
+title: "location"
+output: html_document
+---
+```{r, echo=FALSE}
+location.name <- sites[sites$Location == location, "Longname"]
+data.by.site <- data[data$Location==location,]
+s.species <-summary(droplevels(data.by.site$Species))
+```
+
+### `r location.name`
+
+There were `r nrow(sessions[sessions$Location == location, ])` trapping sessions in `r location.name`, catching a total of `r nrow(data.by.site)` bats of `r length(s.species)` species.
+
+```{r, echo=FALSE}
+totals.by.date <- data.frame(table(droplevels(data.by.site$Date)))
+totals.by.date <- totals.by.date[order(as.Date(totals.by.date$Var1, format="%d/%m/%Y")),]
+colnames(totals.by.date) <- c("Date", "Total")
+totals.by.date$Date <- as.Date(totals.by.date$Date, format="%d/%m/%Y")
+rownames(totals.by.date) <- NULL
+# If we have more than 3 trapping sessions, it is worth to plot the total of captures againts the time of the
+# year to look for differences. Less than that, we'll simply plot the table.
+if (nrow(totals.by.date) > 3) {
+ggplot( data = totals.by.date, aes( Date, Total )) + geom_point() + scale_x_date(breaks="3 months", labels = date_format("%b %Y")) + ylab("Total number of captures") + ggtitle(paste0("Captures at ", location.name)) + theme_bw() + geom_point(na.rm=TRUE, color="blue", size=2)
+} else {
+  kable(totals.by.date)
+}
+```
+
+```{r, echo=FALSE}
+# Table with total and percentage of species on the site
+s.pct <- round(s.species/sum(s.species)*100)
+s.numbers <- data.frame(cbind(s.species, s.pct))
+colnames(s.numbers) <- c("Total", "%")
+rownames(s.numbers) <- lapply(rownames(s.numbers), function(x) species_df[, x])
+s.numbers <- s.numbers[order(-s.numbers$Total), ]
+kable(s.numbers)
+```

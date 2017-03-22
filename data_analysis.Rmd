@@ -1,0 +1,92 @@
+<!-- Copyright (C) 2017 Diana Corbacho
+
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program.  If not, see <http://www.gnu.org/licenses/>. -->
+---
+title: "The name of your bat group"
+output:
+  word_document: default
+  pdf_document: default
+  html_document: default
+---
+
+# Field survey report
+```{r, echo=FALSE, include=FALSE}
+require(knitr)
+require(ggplot2)
+require(scales)
+
+library(plyr)
+library(ggplot2)
+
+field_records <- "/path/to/csv/field/records"
+all_sites <- "/path/to/sites/info"
+
+data <- read.csv(field_records, stringsAsFactors=FALSE)
+sites <- read.csv(all_sites, stringsAsFactors=FALSE)
+locations <- levels(data$Location)
+sessions <- unique(data[,c("Date", "Location")])
+rownames(sessions) <- NULL
+dates <- sort(as.Date(sessions$Date, format="%d/%m/%Y"))
+
+data <- data[!data$Species=="",]
+data$Species <- as.factor(trimws(data$Species))
+data$Location <- as.factor(trimws(data$Location))
+data$Sex <- as.factor(trimws(data$Sex))
+
+# List of UK species and their full latin names
+col.names <- c("B.b", "E.s", "M.be", "M.d", "M.m", "M.n", "Pl.aur", "P.pip", "P.pyg", "R.f", "R.h", "Pl.aus", "N.n", "N.l", "P.n", "M.b")
+latin <- c("Barbastella barbastellus", "Eptesicus serotinus", "Myotis bechsteinii", "Myotis daubentonii", "Myotis mystacinus", "Myotis nattereri", "Plecotus auritus", "Pipistrellus pipistrellus", "Pipistrellus pygmaeus", "Rhinolophus ferrumequinum", "Rhinolophus hipposideros", "Plecotus austriacus", "Nyctalus noctula", "Nyctalus leisleri", "Pipistrellus nathusii", "Myotis brandtii")
+
+species_df <- data.frame(matrix(latin, nrow=1, ncol=16), stringsAsFactors=FALSE)
+colnames(species_df) <- col.names
+```
+There were `r nrow(sessions)` trapping sessions in `r length(locations)` different locations between `r format(dates[[1]],format="%d/%b/%Y")` and `r format(dates[[length(dates)]],format="%d/%b/%Y")`. A total of `r nrow(data)` bats of `r length(summary(data$Species))` different species were captured.
+
+```{r, echo=FALSE}
+# Table listing all the sessions and locations
+fmt_sessions <- merge(sessions, sites)[, c("Date", "Longname", "Gr")]
+colnames(fmt_sessions) <- c("Date", "Location", "Grid reference")
+fmt_sessions <- fmt_sessions[order(as.Date(fmt_sessions$Date, format="%d/%m/%Y")),]
+rownames(fmt_sessions) <- NULL
+kable(fmt_sessions)
+```
+
+```{r, echo=FALSE}
+# Pie chart with distribution by species
+s.species <- summary(data$Species)
+pct <- round(s.species/sum(s.species)*100)
+lbls <- names(s.species)
+lbls <- paste(lbls, pct) 
+lbls <- paste(lbls,"%",sep="")
+pie(s.species, main="Distribution by species", labels=lbls, col=rainbow(length(lbls)))
+```
+
+## Trapping locations
+```{r run-locations-md, include=FALSE}
+out = NULL
+for (location in locations) {
+  out = c(out, knit_child('location.Rmd'))
+}
+```
+`r paste(out, collapse = '\n')`
+
+## Species
+```{r run-species-md, include=FALSE}
+out = NULL
+species <- levels(data$Species)
+for (sp in species) {
+ out = c(out, knit_child('species.Rmd'))
+}
+```
+`r paste(out, collapse = '\n')`
